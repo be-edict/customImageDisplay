@@ -1,7 +1,7 @@
 {
    "uuid": "customImageDisplay@mlem.io",
    "name": "Custom Image Display",
-   "description": "Select an image to display as the icon of the applet",
+   "description": "A simple applet to display your favorite image on a panel.",
    "max-instances": -1,
    "author": "Benedict"
 }
