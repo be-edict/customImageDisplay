@@ -1,0 +1,6 @@
+{
+   "uuid": "customImageDisplay@mlem.io",
+   "name": "Custom Image Display",
+   "description": "Select an image to display as the icon of the applet",
+   "max-instances": -1
+}
