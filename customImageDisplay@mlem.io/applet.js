@@ -11,7 +11,6 @@ MyApplet.prototype = {
 
    _init: function(metadata, orientation, panel_height, instance_id) {
       Applet.IconApplet.prototype._init.call(this, orientation, panel_height, instance_id);
-      //this.set_applet_icon_symbolic_name("dialog-information-symbolic");
       this.settings = new Settings.AppletSettings(this, metadata.uuid, instance_id);
       this.settings.bindProperty(Settings.BindingDirection.IN, 'image-path', 'imagePath', this.on_settings_changed, null);
    },
