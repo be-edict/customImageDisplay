@@ -13,9 +13,14 @@ MyApplet.prototype = {
       Applet.IconApplet.prototype._init.call(this, orientation, panel_height, instance_id);
       this.settings = new Settings.AppletSettings(this, metadata.uuid, instance_id);
       this.settings.bindProperty(Settings.BindingDirection.IN, 'image-path', 'imagePath', this.on_settings_changed, null);
+      this.set_icon();
    },
 
    on_settings_changed: function() {
+      this.set_icon();
+    },
+
+    set_icon() {
       let path = this.imagePath;
       if (path.startsWith("file:///")) {
          path = path.substring(7);
