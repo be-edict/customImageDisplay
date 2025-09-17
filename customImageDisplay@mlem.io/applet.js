@@ -37,15 +37,13 @@ MyApplet.prototype = {
          sourcePath = sourcePath.substring(7);
       }
       if (GLib.file_test(sourcePath, GLib.FileTest.IS_REGULAR)) {
-
-         global.log("Trying to delete: " + this.currentIconName);
          if (this.currentIconName && this.currentIconName !== '') {
             try {
-                let oldFile = Gio.File.new_for_path(this.currentIconName);
-                if (oldFile.query_exists(null)) {
-                    oldFile.delete(null);
-                    global.log("deleted");
-                }
+               let oldFile = Gio.File.new_for_path(this.currentIconName);
+               if (oldFile.query_exists(null)) {
+                  oldFile.delete(null);
+                  global.log("deleted");
+               }
             } catch (err) {
                this.error("Could not delete old icon. " + err);
             }
@@ -125,15 +123,15 @@ function main(metadata, orientation, panel_height, instance_id) {
 }
 
 function saveState(stateObj) {
-    try {
-        let file = Gio.File.new_for_path(STATE_FILE);
-        let outputStream = file.replace(null, false, Gio.FileCreateFlags.NONE, null);
-        let jsonStr = JSON.stringify(stateObj);
-        outputStream.write_all(jsonStr, null);
-        outputStream.close(null);
-    } catch (err) {
-        global.logError("Error saving state: " + err);
-    }
+   try {
+      let file = Gio.File.new_for_path(STATE_FILE);
+      let outputStream = file.replace(null, false, Gio.FileCreateFlags.NONE, null);
+      let jsonStr = JSON.stringify(stateObj);
+      outputStream.write_all(jsonStr, null);
+      outputStream.close(null);
+   } catch (err) {
+      global.logError("Error saving state: " + err);
+   }
 }
 
 function loadState() {
