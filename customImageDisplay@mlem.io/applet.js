@@ -2,12 +2,10 @@ const Applet = imports.ui.applet;
 const Settings = imports.ui.settings;
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
-const Util = imports.misc.util;
 
 const APPLET_DIR = GLib.get_home_dir() + '/.local/share/cinnamon/applets/customImageDisplay@mlem.io';
 const ICON_PATH = APPLET_DIR + '/applet_icon';
-
-let oldIconPath;
+const STATE_FILE = APPLET_DIR + '/state.json';
 
 function MyApplet(metadata, orientation, panel_height, instance_id) {
    this._init(metadata, orientation, panel_height, instance_id);
@@ -15,7 +13,6 @@ function MyApplet(metadata, orientation, panel_height, instance_id) {
 
 MyApplet.prototype = {
    __proto__: Applet.IconApplet.prototype,
-
 
    _init: function(metadata, orientation, panel_height, instance_id) {
       Applet.IconApplet.prototype._init.call(this, orientation, panel_height, instance_id);
@@ -25,45 +22,13 @@ MyApplet.prototype = {
          'imagePath',
          this.on_settings_changed,
          null);
-      this.settings.bindProperty(Settings.BindingDirection.NONE,
-         'current_icon_name',
-         'current_icon_name',
-         () => {
-            global.log("CHANGED!!! to: " + this.settings.getValue('current_icon_name'));
-         }, null);
 
-      this.cleanup_old_applet_icons();
-
-      let iconPath = this.settings.getValue('current_icon_name');
-      if (iconPath && iconPath!== '') {
+      this.currentIconName = loadState().currentIconName || '';
+      if (this.currentIconName && this.currentIconName !== '') {
          this.set_icon();
+      } else {
+         this.set_applet_icon_symbolic_name("dialog-information-symbolic");
       }
-   },
-
-   cleanup_old_applet_icons() {
-      try {
-            let dir = Gio.File.new_for_path(APPLET_DIR);
-            let enumerator = dir.enumerate_children('standard::name', 
-               Gio.FileQueryInfoFlags.NONE, 
-               null);
-            
-            let iconPath = this.settings.getValue('current_icon_name');
-            let fileInfo;
-            while ((fileInfo = enumerator.next_file(null)) != null) {
-               let filename = fileInfo.get_name();
-               if (filename.startsWith('applet_icon_') && 
-                  APPLET_DIR + '/' + filename !== iconPath) {
-                  try {
-                        let file = Gio.File.new_for_path(APPLET_DIR + '/' + filename);
-                        file.delete(null);
-                  } catch (err) {
-                     this.error(err);
-                  }
-               }
-            }
-         } catch (err) {
-            this.error(err);
-        }
    },
 
    on_settings_changed: function() {
@@ -73,14 +38,13 @@ MyApplet.prototype = {
       }
       if (GLib.file_test(sourcePath, GLib.FileTest.IS_REGULAR)) {
 
-         global.log("Trying to delete: " + this.settings.getValue('current_icon_name'));
-         let iconPath = this.settings.getValue('current_icon_name');
-         if (iconPath && iconPath !== '') {
+         global.log("Trying to delete: " + this.currentIconName);
+         if (this.currentIconName && this.currentIconName !== '') {
             try {
-                let oldFile = Gio.File.new_for_path(iconPath);
+                let oldFile = Gio.File.new_for_path(this.currentIconName);
                 if (oldFile.query_exists(null)) {
                     oldFile.delete(null);
-                    global.log("delted");
+                    global.log("deleted");
                 }
             } catch (err) {
                this.error("Could not delete old icon. " + err);
@@ -96,12 +60,16 @@ MyApplet.prototype = {
                extension = sourcePath.substring(lastDot);
          }
          
-         iconPath = ICON_PATH + '_' + timestamp + extension;
-         let destFile = Gio.File.new_for_path(iconPath);
+         this.currentIconName = ICON_PATH + '_' + timestamp + extension;
+
+         let state = loadState();
+         state.currentIconName = this.currentIconName;
+         saveState(state);
+
+         let destFile = Gio.File.new_for_path(this.currentIconName);
 
          try {
             sourceFile.copy(destFile, Gio.FileCopyFlags.OVERWRITE, null, null);
-            this.settings.setValue('current_icon_name', iconPath);
             this.set_icon();
          } catch (err) {
             this.error("Error while copying the file! " + err);
@@ -118,10 +86,9 @@ MyApplet.prototype = {
    },
 
    set_icon() {
-      let iconPath = this.settings.getValue('current_icon_name');
-      if (iconPath && iconPath!== '' && GLib.file_test(iconPath, GLib.FileTest.IS_REGULAR)){
+      if (this.currentIconName && this.currentIconName !== '' && GLib.file_test(this.currentIconName, GLib.FileTest.IS_REGULAR)){
          try {
-            this.set_applet_icon_path(iconPath);
+            this.set_applet_icon_path(this.currentIconName);
          } catch (err) {
             this.error(err);
          }
@@ -131,10 +98,9 @@ MyApplet.prototype = {
     },
 
    on_applet_removed_from_panel: function() {
-      let iconPath = this.settings.getValue('current_icon_name');
-      if (iconPath && iconPath !== '') {
+      if (this.currentIconName && this.currentIconName !== '') {
             try {
-               let file = Gio.File.new_for_path(iconPath);
+               let file = Gio.File.new_for_path(this.currentIconName);
                if (file.query_exists(null)) {
                   file.delete(null);
                }
@@ -142,10 +108,46 @@ MyApplet.prototype = {
                this.error(err);
             }
       }
+      try {
+         let file = Gio.File.new_for_path(STATE_FILE);
+         if (file.query_exists(null)) {
+            file.delete(null);
+         }
+      } catch (err) {
+         this.error(err);
+      }
       this.settings.finalize();
    }
 };
 
 function main(metadata, orientation, panel_height, instance_id) {
    return new MyApplet(metadata, orientation, panel_height, instance_id);
+}
+
+function saveState(stateObj) {
+    try {
+        let file = Gio.File.new_for_path(STATE_FILE);
+        let outputStream = file.replace(null, false, Gio.FileCreateFlags.NONE, null);
+        let jsonStr = JSON.stringify(stateObj);
+        outputStream.write_all(jsonStr, null);
+        outputStream.close(null);
+    } catch (err) {
+        global.logError("Error saving state: " + err);
+    }
+}
+
+function loadState() {
+   try {
+      let file = Gio.File.new_for_path(STATE_FILE);
+      if (!file.query_exists(null)) {
+         return {};
+      }
+      let [ok, contents] = file.load_contents(null);
+      if (ok) {
+         return JSON.parse(imports.byteArray.toString(contents));
+      }
+   } catch (err) {
+      global.logError("Error loading state: " + err);
+   }
+   return {};
 }
