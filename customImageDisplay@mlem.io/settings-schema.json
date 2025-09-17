@@ -4,5 +4,9 @@
         "description" : "Choose an image",
         "default" : "~/",
         "select-dir" : false
+    },
+    "current_icon_name" : {
+        "type" : "generic",
+        "default" : ""
     }
 }
