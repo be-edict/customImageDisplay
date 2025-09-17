@@ -42,7 +42,6 @@ MyApplet.prototype = {
                let oldFile = Gio.File.new_for_path(this.currentIconName);
                if (oldFile.query_exists(null)) {
                   oldFile.delete(null);
-                  global.log("deleted");
                }
             } catch (err) {
                this.error("Could not delete old icon. " + err);
